@@ -4,4 +4,5 @@ sqlmodel==0.0.22
 psycopg2-binary==2.9.9
 openai==1.46.0
 pydantic==2.7.4
+pydantic-settings==2.3.4
 python-dotenv==1.0.1

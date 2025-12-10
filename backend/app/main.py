@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from sqlmodel import SQLModel
 
-from .database import engine, get_session
+from .database import engine
 from .api.routes.evals import router as evals_router
+from .core.security import verify_api_key
 
 
 app = FastAPI(title="Vanguard AI Eval Platform", version="0.1.0")
@@ -19,4 +20,9 @@ async def healthcheck():
     return {"status": "ok"}
 
 
-app.include_router(evals_router, prefix="/v1/evals", tags=["evals"])
+app.include_router(
+    evals_router,
+    prefix="/v1/evals",
+    tags=["evals"],
+    dependencies=[Depends(verify_api_key)],
+)

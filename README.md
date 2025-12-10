@@ -4,16 +4,18 @@ MVP for an AI Evaluation Platform that runs prompts against multiple test cases,
 
 ## Running locally (Docker + Postgres)
 
-1. **Set your OpenAI API key** (PowerShell example):
+1. **Set your environment variables** (PowerShell examples):
 
    ```powershell
-   $env:OPENAI_API_KEY = "your-key-here"
+   $env:OPENAI_API_KEY = "your-openai-key-here"
+   $env:API_KEY = "dev-secret"   # optional simple API key for /v1/* endpoints
    ```
 
-2. **Start the stack** from the repo root:
+2. **Start the stack** from the `infra/` directory:
 
    ```bash
-   docker compose -f infra/docker-compose.yml up --build
+   cd infra
+   docker compose up --build
    ```
 
 3. **Healthcheck**:
@@ -23,21 +25,26 @@ MVP for an AI Evaluation Platform that runs prompts against multiple test cases,
 4. **Run an eval** (example request):
 
    - Endpoint: `POST http://localhost:8000/v1/evals/run`
-   - Body:
+   - Example `curl` (PowerShell-style caret line breaks):
 
-     ```json
-     {
-       "prompt": "You are a helpful assistant.",
-       "target_model": "stub-model-v1",
-       "pass_threshold": 0.75,
-       "test_cases": [
-         { "input": "Say hello.", "expected_output": "hello" },
-         { "input": "What is 2+2?", "expected_output": "4" }
+     ```bash
+     curl -X POST "http://localhost:8000/v1/evals/run" ^
+       -H "Content-Type: application/json" ^
+       -H "x-api-key: dev-secret" ^
+       -H "X-Project-Id: my-project-id" ^
+       --data-raw ^
+     "{
+       \"prompt\": \"You are a helpful assistant.\",
+       \"target_model\": \"stub-model-v1\",
+       \"pass_threshold\": 0.75,
+       \"test_cases\": [
+         { \"input\": \"Say hello.\", \"expected_output\": \"hello\" },
+         { \"input\": \"What is 2+2?\", \"expected_output\": \"4\" }
        ]
-     }
+     }"
      ```
 
-   You can send this with a tool like `curl`, Postman, or VS Code/IDE HTTP client.
+     You can also use Postman or your IDE's HTTP client.
 
 ## Running backend without Docker (sqlite)
 

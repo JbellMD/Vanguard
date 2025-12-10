@@ -16,6 +16,7 @@ from ..schemas import (
     EvalResultItem,
 )
 from ...services.eval_runner import EvalRunner
+from ..core.security import get_project_id
 
 
 router = APIRouter()
@@ -25,6 +26,7 @@ router = APIRouter()
 def run_eval(
     payload: EvalRunRequest,
     session: Session = Depends(get_session),
+    project_id: str | None = Depends(get_project_id),
 ) -> EvalRunResponse:
     runner = EvalRunner()
     result = runner.run_eval(
@@ -44,6 +46,7 @@ def list_runs(
     status: Optional[str] = None,
     overall_pass: Optional[bool] = None,
     session: Session = Depends(get_session),
+    project_id: str | None = Depends(get_project_id),
 ) -> EvalRunListResponse:
     statement = select(TestRun)
 
@@ -80,6 +83,7 @@ def list_runs(
 def get_run_detail(
     run_id: str,
     session: Session = Depends(get_session),
+    project_id: str | None = Depends(get_project_id),
 ) -> EvalRunDetailResponse:
     run = session.get(TestRun, run_id)
     if not run:

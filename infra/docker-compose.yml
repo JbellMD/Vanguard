@@ -21,6 +21,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://vanguard:vanguard@db:5432/vanguard_eval
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      API_KEY: ${API_KEY}
     ports:
       - "8000:8000"
 
