@@ -57,7 +57,7 @@ class EvalRunner:
                 run_id=run.id,
                 input_text=input_text,
                 expected_output=expected_output,
-                metadata=metadata,
+                extra_metadata=metadata,
             )
             session.add(case)
             session.commit()
@@ -77,13 +77,14 @@ class EvalRunner:
 
             result = EvalResult(
                 test_case_id=case.id,
-                model_output=model_output,
+                output_text=model_output,
                 heuristic_score=heuristic_score,
                 judge_score=judge_score,
                 combined_score=combined_score,
                 passed=passed,
                 judge_reasoning=reasoning,
             )
+
             session.add(result)
             session.commit()
 

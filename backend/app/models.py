@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
+from sqlalchemy import Column, JSON
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -13,7 +14,7 @@ class EvalResult(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     test_case_id: uuid.UUID = Field(foreign_key="test_cases.id", index=True)
 
-    model_output: str
+    model_output_text: str
     heuristic_score: float
     judge_score: float
     combined_score: float
@@ -31,7 +32,10 @@ class TestCase(SQLModel, table=True):
 
     input_text: str
     expected_output: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = Field(default=None, sa_column_kwargs={"nullable": True})
+    extra_metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
 
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
