@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vanguard_eval
+      POSTGRES_USER: vanguard
+      POSTGRES_PASSWORD: vanguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - vanguard_db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://vanguard:vanguard@db:5432/vanguard_eval
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "8000:8000"
+
+volumes:
+  vanguard_db_data:

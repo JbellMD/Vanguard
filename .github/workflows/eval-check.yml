@@ -1,0 +1,126 @@
+# Example CI gate for Vanguard AI Eval Platform
+#
+# - Set `API_URL` as a GitHub Actions secret pointing at your deployed backend,
+#   e.g. https://api.example.com
+# - Set `OPENAI_API_KEY` as a GitHub Actions secret for the judge model.
+#
+# To switch to running the backend via docker-compose in CI instead of using a
+# deployed URL, replace the `API_URL` environment variable with the local
+# compose endpoint and add a `docker compose up` step.
+
+name: Eval Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  eval-check:
+    runs-on: ubuntu-latest
+
+    env:
+      # Set these in your repo settings: Settings -> Secrets and variables -> Actions
+      API_URL: ${{ secrets.API_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run backend tests
+        working-directory: ./backend
+        run: pytest
+
+      # Optional alternative: bring up backend + Postgres using docker-compose.
+      # Uncomment below and point API_URL to http://localhost:8000.
+      # - name: Start services via docker-compose
+      #   run: |
+      #     docker compose -f infra/docker-compose.yml up -d --build
+      #   env:
+      #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Run evaluation via Vanguard API
+        env:
+          API_URL: ${{ env.API_URL }}
+          OPENAI_API_KEY: ${{ env.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "API_URL is not set. Configure it as a GitHub Actions secret named API_URL."
+            exit 1
+          fi
+
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is not set. Configure it as a GitHub Actions secret."
+            exit 1
+          fi
+
+          echo "Calling eval API at $API_URL/v1/evals/run"
+
+          # Small test suite that should PASS with the current stub model
+          # The stub output is: "[model=...] Prompt: {prompt}\nInput: {test_input}"
+          # We choose expected_output values that appear in the stub output.
+          cat >payload.json <<'EOF'
+          {
+            "prompt": "You are a helpful, concise assistant.",
+            "target_model": "stub-ci-model",
+            "pass_threshold": 0.75,
+            "test_cases": [
+              {
+                "input": "Hello",
+                "expected_output": "Input: Hello"
+              },
+              {
+                "input": "What is 2+2?",
+                "expected_output": "Input: What is 2+2?"
+              },
+              {
+                "input": "Summarize: GitHub Actions",
+                "expected_output": "Input: Summarize: GitHub Actions"
+              }
+            ]
+          }
+          EOF
+
+          HTTP_CODE=$(curl -sS -o response.json -w "%{http_code}" \
+            -X POST "$API_URL/v1/evals/run" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            --data-binary @payload.json)
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Raw response:"
+          cat response.json
+
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "Eval API call failed with status $HTTP_CODE"
+            exit 1
+          fi
+
+          python << 'PY'
+          import json
+          from pathlib import Path
+
+          resp = json.loads(Path("response.json").read_text())
+
+          overall = resp.get("overall_pass")
+          print(f"overall_pass = {overall}")
+
+          if overall is not True:
+              raise SystemExit("Evaluation gate failed: overall_pass is not true")
+          PY
+
+          echo "Evaluation gate passed."
